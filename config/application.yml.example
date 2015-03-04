@@ -1,0 +1,7 @@
+development: &common
+  MECAB_PATH: 'path to mecab lib'
+  MECAB_SYSTEM_DIC_PATH: 'path to dictionary directory'
+test:
+  <<: *common
+production:
+  <<: *common

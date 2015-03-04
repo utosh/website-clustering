@@ -5,6 +5,7 @@ ruby '2.1.2'
 gem 'rack', "~> 1.6.0"
 gem 'rake'
 # gem 'sinatra'
+gem 'grape'
 
 # DB
 gem 'sqlite3'
@@ -23,8 +24,11 @@ gem 'racksh'
 gem 'pry'
 gem 'pry-rescue'
 gem 'tapp'
+gem 'nokogiri'
 gem 'natto'
 
+gem 'nokogiri'
+gem 'natto', :require => false
 # gem 'newrelic_rpm'
 
 group :development do

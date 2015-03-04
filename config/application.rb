@@ -2,8 +2,13 @@ require File.expand_path('../boot', __FILE__)
 
 Bundler.require(:default, ENV['RACK_ENV'])
 
+if vars = YAML.load(File.read("config/application.yml"))[ENV['RACK_ENV']]
+  vars.each { |k, v| ENV[k] = v }
+end
+
 require 'active_support/all'
 require 'active_support/dependencies'
+ActiveSupport::Dependencies.autoload_paths << "app/api"
 ActiveSupport::Dependencies.autoload_paths << "app/models"
 ActiveSupport::Dependencies.autoload_paths << "lib"
 

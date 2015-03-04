@@ -9,7 +9,7 @@ end
 # use Rack::Lock
 use Rack::Runtime
 use Rack::MethodOverride
-use Rack::Logger, RecommendApp.config.log_level
+use Rack::Logger, Application.config.log_level
 use Rack::CommonLogger, Logger.new("log/#{ENV['RACK_ENV']}.log")
 
 if ENV['RACK_ENV'] == 'development'
@@ -20,3 +20,4 @@ use ActiveRecord::ConnectionAdapters::ConnectionManagement
 use ActiveRecord::QueryCache
 
 # run Rack::Cascade.new([])
+run ApplicationAPI
