@@ -19,24 +19,25 @@ class Clustering
   def cluster!
   end
 
-  # def calc_idf(doc_num, counts)
-  # end
-
   def all_document_term_counts
     @all_document_term_counts ||= documents.values.map(&:count_terms)
   end
 
+  def calc_idf(n, df_t)
+    Math.log(n.to_f / df_t) + 1
+  end
+
   def idf
     @idf ||= begin
-      freq = Hash.new(0)
+      cross_appear_count = Hash.new(0)
       all_document_term_counts.each do |counts|
-        counts.keys.each { |term| freq[term] += 1 }
+        counts.keys.each { |term| cross_appear_count[term] += 1 }
       end
 
       _idf = {}
       document_count = all_document_term_counts.size
-      freq.each do |term, count|
-        _idf[term] = Math.log(document_count.to_f / count) + 1
+      cross_appear_count.each do |term, count|
+        _idf[term] = calc_idf(document_count, count)
       end
 
       _idf
@@ -44,13 +45,24 @@ class Clustering
   end
 
   def tf_idf(term, document_id)
+    memo_key = "#{term}:#{document_id}"
+    memo = tf_idf_memo[memo_key]
+    return memo if memo
+
     document = documents[document_id]
     return unless document
 
-    document.tf[term] * idf[term]
+    tf_idf_memo[memo_key] = document.tf[term] * idf[term]
+    tf_idf_memo[memo_key]
+  end
+
+  def tf_idf_memo
+    @tf_idf_memo ||= {}
   end
 
   class Document
+    TERM_COUNT_THRESHOLD = 2
+
     attr_reader :source, :tokenizer
 
     def self.format(source)
@@ -72,14 +84,17 @@ class Clustering
 
         token.each_line do |line|
           next unless /名詞/.match(line)
-          counts[line.split("\t")[0]] += 1
+          term = line.split("\t")[0].strip
+
+          if /\w+/.match(term) and term.size > 1 and /[^\d]/.match(term)
+            counts[term] += 1
+          end
         end
 
-        counts
+        counts.reject { |term, count| count <= TERM_COUNT_THRESHOLD }.to_h
       end
     end
 
-    # TODO: 中間値から一定以下のカウントの単語を除外する
     def tf
       @tf ||= begin
         sum = count_terms.values.sum

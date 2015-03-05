@@ -63,6 +63,10 @@ RSpec.describe Clustering::Document, type: :lib do
     describe "#count_terms" do
       subject { @doc.count_terms }
 
+      before do
+        stub_const("Clustering::Document::TERM_COUNT_THRESHOLD", 1)
+      end
+
       let(:source) do
         <<-TEXT
 （１）Ruby（ルビー）とは？
@@ -87,6 +91,10 @@ Rubyベストプラクティス -プロフェッショナルによるコード�
         expect(subject).to be_a(Hash)
         expect(subject["Ruby"]).to eq source.scan(/Ruby/).size
       end
+
+      it "reject less than count-threshold" do
+        expect(subject.values.min).to be > 1
+      end
     end
 
     describe "#tf" do
@@ -94,6 +102,20 @@ Rubyベストプラクティス -プロフェッショナルによるコード�
 
       it do
         expect(subject).to be_a(Hash)
+      end
+
+      it do
+        expect(subject.keys.any? { |term| /\A\s.+\s\z/.match(term) } ).to be_falsey
+      end
+
+      it "reject meaningless terms" do
+        expect(subject["."]).to be_nil
+        expect(subject["|"]).to be_nil
+        expect(subject["1"]).to be_nil
+        expect(subject["p"]).to be_nil
+      end
+
+      it do
         expect(subject["Ruby"]).to be < 1 # TODO: ちゃんとテストする
       end
     end

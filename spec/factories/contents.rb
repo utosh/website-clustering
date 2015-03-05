@@ -8,7 +8,7 @@ FactoryGirl.define do
     end
 
     def wiki_ruby_text
-      @wiki_ruby_text ||= File.read(Application.root.tapp + "spec/data/wikipedia/ruby.txt")
+      @wiki_ruby_text ||= File.read(Application.root + "spec/data/wikipedia/ruby.txt")
     end
   end
 
