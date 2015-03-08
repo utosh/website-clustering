@@ -5,7 +5,7 @@ require 'crawler'
 RSpec.describe Crawler, type: :lib do
   before do
     allow(OpenURI).to receive(:open_uri) do |*args|
-      File.open(Application.root + "spec/factories/ruby_or_jp_top.html")
+      File.open(Application.root + "spec/data/ruby_or_jp_top.html")
     end
   end
 
@@ -23,31 +23,6 @@ RSpec.describe Crawler, type: :lib do
       subject
       expect(@spy).to have_received(:start).with(depth: 2)
       expect(@spy).to have_received(:sitemap)
-    end
-  end
-
-  describe "decompose_url" do
-    subject { Crawler.decompose_url url }
-    let(:url) { "http://hoge.com" }
-
-    it do
-      expect(subject).to eq ["http", "hoge.com", ""]
-    end
-
-    context "pattern2" do
-      let(:url) { "https://www-hoge.tokyo/aaaaaaa?hoge=fuga" }
-
-      it do
-        expect(subject).to eq ["https", "www-hoge.tokyo", "/aaaaaaa?hoge=fuga"]
-      end
-    end
-
-    context "when given url is invalid format" do
-      let(:url) { "hoge.com" }
-
-      it do
-        expect(subject).to be_nil
-      end
     end
   end
 
@@ -72,10 +47,10 @@ end
 RSpec.describe Crawler, type: :model do
   before do
     allow(OpenURI).to receive(:open_uri) do |*args|
-      File.open(Application.root + "spec/factories/ruby_or_jp_top.html")
+      File.open(Application.root + "spec/data/ruby_or_jp_top.html")
     end
 
-    @content = Crawler.new(args)
+    @crawler = Crawler.new(args)
   end
 
   let (:args) do
@@ -84,11 +59,34 @@ RSpec.describe Crawler, type: :model do
     }
   end
 
+  # TODO: test
   describe "#start" do
-    subject { @content.start }
+    subject { @crawler.start }
 
     it do
       expect{subject}.to_not raise_error
+    end
+  end
+
+  # TODO: test
+  describe "#parse_link" do
+    subject { @crawler.parse_link doc }
+
+    let(:doc) { Nokogiri::HTML(FactoryHelpers.read_data("wikipedia/ruby.html")) }
+
+    it do
+      # TODO: scheme://domain/path
+      # expect(subject.first).to match %r!https?://.+!
+    end
+  end
+
+  describe "#crawl" do
+    subject { @crawler.crawl urls }
+
+    let(:urls) { ["www.ruby.or.jp"] }
+
+    it do
+      expect(subject.first ).to be_a Nokogiri::HTML
     end
   end
 end

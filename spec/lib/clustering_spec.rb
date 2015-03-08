@@ -9,9 +9,38 @@ end
 RSpec.describe Clustering, type: :lib do
   before do
     @c = Clustering.new(documents)
+    @redis = Redis.new(Application.config.redis_connection)
+    @redis.flushdb
+  end
+
+  after do
+    @redis.flushdb
   end
 
   let(:documents) { [FactoryHelpers.wiki_ruby_text] }
+
+  describe "#analyze!" do
+    subject { @c.analyze! }
+
+    let(:documents) do
+      [
+        FactoryHelpers.wiki_ruby_text,
+        FactoryHelpers.read_data("matsue_about_ruby.txt"),
+        FactoryHelpers.read_data("matsue_about_ruby2.txt"),
+        FactoryHelpers.read_data("matsue_about_ruby3.txt")
+      ]
+    end
+
+    it do
+      expect{subject}.to_not raise_error
+      expect(subject).to be_a(Array)
+      # expect(@c).to receive(:tf_idf)
+      # expect(subject).to eq [
+      #   ["Ruby", "プログラミング"], # 全体
+      #   [] # Document個別
+      # ]
+    end
+  end
 
   describe "#idf" do
     subject { @c.idf }
@@ -90,6 +119,7 @@ Rubyベストプラクティス -プロフェッショナルによるコード�
       it do
         expect(subject).to be_a(Hash)
         expect(subject["Ruby"]).to eq source.scan(/Ruby/).size
+        expect(subject["コンピュータ"]).to eq source.scan(/コンピュータ/).size
       end
 
       it "reject less than count-threshold" do
@@ -118,6 +148,46 @@ Rubyベストプラクティス -プロフェッショナルによるコード�
       it do
         expect(subject["Ruby"]).to be < 1 # TODO: ちゃんとテストする
       end
+    end
+  end
+end
+
+
+RSpec.describe Clustering::Ranking, type: :lib do
+  before do
+    @redis = Redis.new(Application.config.redis_connection)
+    @redis.flushdb
+  end
+
+  after do
+    @redis.flushdb
+  end
+
+  describe "#create_ranking" do
+    subject { @rank.create_ranking }
+
+    before do
+      @rank = Clustering::Ranking.new id, data
+    end
+
+    let(:id) { "plang" }
+    let(:data) do
+      {
+        "Ruby"    => 34.5,
+        "Python"  => 23.6,
+        "Java"    => 49.0,
+        "PHP"     => 35.2
+      }
+    end
+
+    it "create ranking" do
+      expect(subject).to eq ["Java", "PHP", "Ruby", "Python"]
+      expect(@redis.zrevrange("rank:plang", 0, -1, with_scores: true).to_h).to eq({
+        "Java"    => 49.0,
+        "PHP"     => 35.2,
+        "Ruby"    => 34.5,
+        "Python"  => 23.6
+      })
     end
   end
 end

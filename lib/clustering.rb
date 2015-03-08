@@ -8,15 +8,20 @@ class Clustering
   def initialize(documents, tokenizer: MecabTokenizer.new)
     @tokenizer = tokenizer
 
-    tmp_num = 1
+    assigned_id = 1
     @documents = documents.inject({}) do |hash, d|
-      hash[tmp_num] = Document.new(d, @tokenizer)
-      tmp_num += 1
+      hash[assigned_id] = Document.new(d, @tokenizer)
+      assigned_id += 1
       hash
     end
   end
 
-  def cluster!
+  def analyze!
+    # term全部のtf-idf値を出してランキング化
+    rankings = documents.map { |id, doc| Ranking.new(id, doc.tf) }
+    # 上位のワードを特徴として出力
+    rankings.map { |r| r.rank(10) }
+    # (1)全体 (2)個別
   end
 
   def all_document_term_counts
@@ -24,7 +29,7 @@ class Clustering
   end
 
   def calc_idf(n, df_t)
-    Math.log(n.to_f / df_t) + 1
+    Math.log(n.to_f / df_t)# + 1
   end
 
   def idf
@@ -83,11 +88,19 @@ class Clustering
         counts = Hash.new(0)
 
         token.each_line do |line|
-          next unless /名詞/.match(line)
-          term = line.split("\t")[0].strip
+          next unless /名詞|動詞\-自立|形容詞\-自立/.match(line)
+          next if /非自立/.match(line)
+          term = line.split("\t")[0].strip.gsub(/[,"'\\]/, "")
 
-          if /\w+/.match(term) and term.size > 1 and /[^\d]/.match(term)
-            counts[term] += 1
+          case line
+          when /名詞/
+            if term.size >= 2 and /[^\d]/.match(term)
+              counts[term] += 1
+            end
+          else
+            if term.size >= 3
+              counts[term] += 1
+            end
           end
         end
 
@@ -105,6 +118,67 @@ class Clustering
         end
 
         _tf
+      end
+    end
+  end
+
+  class Ranking
+    delegate :redis, :namespace, to: "self.class"
+    attr_reader :mykey, :data
+
+    def self.redis
+      @redis ||= Redis.new(Application.config.redis_connection)
+    end
+
+    def self.namespace
+      "rank"
+    end
+
+    def initialize(id, data)
+      raise ArgumentError if id.blank?
+      @mykey = "#{namespace}:#{id}"
+      @data = data
+      create_ranking
+    end
+
+    def create_ranking
+      if redis.exists(mykey)
+        rank(-1)
+      else
+        create_ranking!
+      end
+    end
+
+    def create_ranking!
+      res = redis.multi do
+        data.to_a.in_groups_of(100, false) do |group|
+          redis.zadd mykey, group.map { |term, count| [count, encode_multibyte_char(term)] }
+        end
+        redis.zrevrange mykey, 0, -1#, with_scores: true
+      end
+
+      res[1]
+    end
+
+    def encode_multibyte_char(str)
+      Base64.encode64(str)
+    end
+
+    def decode_multibyte_char(str)
+      Base64.decode64(str).force_encoding("utf-8")
+    end
+
+    def rank(top = 5, with_scores: false)
+      res = redis.zrevrange(mykey, 0, top, with_scores: with_scores)
+
+      if with_scores
+        res.to_a.map do |term, count|
+          [decode_multibyte_char(term), count]
+        end
+      else
+        res.to_a.map do |term|
+          decode_multibyte_char(term)
+        end
       end
     end
   end

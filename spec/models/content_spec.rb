@@ -26,7 +26,7 @@ end
 RSpec.describe Content, type: :model do
   before do
     allow(OpenURI).to receive(:open_uri) do |*args|
-      File.open(Application.root + "spec/factories/ruby_or_jp_top.html")
+      File.open(Application.root + "spec/data/ruby_or_jp_top.html")
     end
 
     @content = FactoryGirl.create(:content)
