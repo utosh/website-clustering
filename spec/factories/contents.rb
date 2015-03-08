@@ -4,11 +4,19 @@ FactoryGirl.define do
   module FactoryHelpers
     module_function
     def ruby_or_jp_top_html
-      @ruby_or_jp_top_html ||= File.read(File.expand_path("../ruby_or_jp_top.html", __FILE__))
+      read_data("ruby_or_jp_top.html")
     end
 
     def wiki_ruby_text
-      @wiki_ruby_text ||= File.read(Application.root + "spec/data/wikipedia/ruby.txt")
+      read_data("wikipedia/ruby.txt")
+    end
+
+    def read_data(path)
+      @data ||= {}
+      @data[path] ||= begin
+        data_path = Application.root + "spec/data" + path.sub(/\A[\.\/]+/, "")
+        File.read(data_path) if File.exist?(data_path)
+      end
     end
   end
 
