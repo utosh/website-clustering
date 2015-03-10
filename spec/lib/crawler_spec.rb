@@ -86,7 +86,7 @@ RSpec.describe Crawler, type: :model do
     let(:urls) { ["www.ruby.or.jp"] }
 
     it do
-      expect(subject.first ).to be_a Nokogiri::HTML
+      expect(subject.first).to be_a Nokogiri::HTML
     end
   end
 end
