@@ -1,3 +1,4 @@
+# encoding: utf-8
 require 'nokogiri'
 require 'open-uri'
 
@@ -22,14 +23,14 @@ class Crawler
     @domain, @scheme, @root = domain, scheme, root
     @root_path = "/" if @root_path.blank?
     @root = "#{scheme}://#{domain}#{root}"
-    @sitemap = Sitemap.new
+    @sitemap = TreeNode.new
   end
 
   def start(depth: 2)
     top = self.open_document(root)
     memo[root] = true
     # TODO: depthまで階層を下ってクロールする
-    sitemap[top] = crawl(parse_link(top))
+    sitemap.add top, crawl(parse_link(top))
   end
 
   def parse_link(doc)
@@ -58,16 +59,14 @@ class Crawler
   def memo
     @memo ||= {}
   end
+end
 
-  class Sitemap < Hash
-    def to_h
-      # simple hash map
-      super
-    end
+class DendrogramNode
+  attr_accessor :left, :right
 
-    def contents
-      # all documents
-      []
-    end
+  def initialize(obj, left = nil, right = nil)
+    @object = obj
+    @left = left if left
+    @right = right if right
   end
 end
